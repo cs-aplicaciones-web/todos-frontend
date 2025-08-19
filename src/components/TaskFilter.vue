@@ -8,7 +8,7 @@
             <i class="bi bi-funnel me-1"></i>
             Tipo
           </label>
-          <select 
+          <select
             class="form-select form-select-sm"
             id="filterType"
             v-model="localFilters.type"
@@ -16,11 +16,7 @@
             :disabled="loading"
           >
             <option value="">Todos los tipos</option>
-            <option 
-              v-for="type in TASK_TYPES" 
-              :key="type" 
-              :value="type"
-            >
+            <option v-for="type in TASK_TYPES" :key="type" :value="type">
               {{ type }}
             </option>
           </select>
@@ -32,7 +28,7 @@
             <i class="bi bi-exclamation-triangle me-1"></i>
             Prioridad
           </label>
-          <select 
+          <select
             class="form-select form-select-sm"
             id="filterPriority"
             v-model="localFilters.priority"
@@ -40,11 +36,7 @@
             :disabled="loading"
           >
             <option value="">Todas las prioridades</option>
-            <option 
-              v-for="priority in TASK_PRIORITIES" 
-              :key="priority" 
-              :value="priority"
-            >
+            <option v-for="priority in TASK_PRIORITIES" :key="priority" :value="priority">
               {{ priority.charAt(0).toUpperCase() + priority.slice(1) }}
             </option>
           </select>
@@ -56,7 +48,7 @@
             <i class="bi bi-check-circle me-1"></i>
             Estado
           </label>
-          <select 
+          <select
             class="form-select form-select-sm"
             id="filterCompleted"
             v-model="localFilters.completed"
@@ -75,7 +67,7 @@
             <i class="bi bi-sort-down me-1"></i>
             Ordenar por
           </label>
-          <select 
+          <select
             class="form-select form-select-sm"
             id="filterSort"
             v-model="localFilters.sortBy"
@@ -94,7 +86,7 @@
         <div class="col-md-2 col-12">
           <div class="d-flex gap-2">
             <!-- Botón de orden -->
-            <button 
+            <button
               type="button"
               :class="`btn btn-outline-secondary btn-sm ${localFilters.order === 'asc' ? 'active' : ''}`"
               @click="toggleOrder"
@@ -105,7 +97,7 @@
             </button>
 
             <!-- Botón limpiar filtros -->
-            <button 
+            <button
               type="button"
               class="btn btn-outline-danger btn-sm"
               @click="clearFilters"
@@ -122,33 +114,36 @@
       <div v-if="hasActiveFilters" class="mt-3">
         <div class="d-flex flex-wrap gap-2 align-items-center">
           <small class="text-muted">Filtros activos:</small>
-          
+
           <span v-if="localFilters.type" class="badge bg-primary">
             Tipo: {{ localFilters.type }}
-            <button 
-              type="button" 
-              class="btn-close btn-close-white ms-1" 
-              style="font-size: 0.6rem;"
+            <button
+              type="button"
+              class="btn-close btn-close-white ms-1"
+              style="font-size: 0.6rem"
               @click="clearFilter('type')"
             ></button>
           </span>
-          
+
           <span v-if="localFilters.priority" class="badge bg-warning text-dark">
             Prioridad: {{ localFilters.priority }}
-            <button 
-              type="button" 
-              class="btn-close ms-1" 
-              style="font-size: 0.6rem;"
+            <button
+              type="button"
+              class="btn-close ms-1"
+              style="font-size: 0.6rem"
               @click="clearFilter('priority')"
             ></button>
           </span>
-          
-          <span v-if="localFilters.completed !== undefined" class="badge bg-success">
+
+          <span
+            v-if="localFilters.completed !== undefined && localFilters.completed !== ''"
+            class="badge bg-success"
+          >
             {{ localFilters.completed === 'true' ? 'Completadas' : 'Pendientes' }}
-            <button 
-              type="button" 
-              class="btn-close btn-close-white ms-1" 
-              style="font-size: 0.6rem;"
+            <button
+              type="button"
+              class="btn-close btn-close-white ms-1"
+              style="font-size: 0.6rem"
               @click="clearFilter('completed')"
             ></button>
           </span>
@@ -160,7 +155,7 @@
 
 <script setup lang="ts">
 import { reactive, computed, watch } from 'vue'
-import type { TaskFilters } from '@/types/Task'
+import type { TaskFilters, TaskType, TaskPriority } from '@/types/Task'
 import { TASK_TYPES, TASK_PRIORITIES } from '@/types/Task'
 
 // Props
@@ -170,7 +165,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  loading: false
+  loading: false,
 })
 
 // Emits
@@ -181,20 +176,35 @@ interface Emits {
 
 const emit = defineEmits<Emits>()
 
-// Local filters state
-const localFilters = reactive<TaskFilters>({
+// Local filters state - using string for completed to match select options
+interface LocalFilters {
+  type?: TaskType
+  priority?: TaskPriority
+  completed?: string // 'true', 'false', or undefined
+  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'deadline' | 'priority'
+  order: 'asc' | 'desc'
+}
+
+const localFilters = reactive<LocalFilters>({
   type: props.filters.type,
   priority: props.filters.priority,
-  completed: props.filters.completed,
+  completed:
+    props.filters.completed === true
+      ? 'true'
+      : props.filters.completed === false
+        ? 'false'
+        : undefined,
   sortBy: props.filters.sortBy || 'createdAt',
-  order: props.filters.order || 'desc'
+  order: props.filters.order || 'desc',
 })
 
 // Computed properties
 const hasActiveFilters = computed(() => {
-  return !!(localFilters.type || 
-           localFilters.priority || 
-           localFilters.completed !== undefined)
+  return !!(
+    localFilters.type ||
+    localFilters.priority ||
+    (localFilters.completed !== undefined && localFilters.completed !== '')
+  )
 })
 
 // Methods
@@ -202,11 +212,14 @@ const emitFilterChange = () => {
   // Convert string 'true'/'false' to boolean for completed filter
   const filters: TaskFilters = {
     ...localFilters,
-    completed: localFilters.completed === 'true' ? true : 
-               localFilters.completed === 'false' ? false : 
-               undefined
+    completed:
+      localFilters.completed === 'true'
+        ? true
+        : localFilters.completed === 'false'
+          ? false
+          : undefined,
   }
-  
+
   emit('update:filters', filters)
   emit('filter-change')
 }
@@ -223,21 +236,44 @@ const clearFilters = () => {
   emitFilterChange()
 }
 
-const clearFilter = (filterName: keyof TaskFilters) => {
-  localFilters[filterName] = undefined
+const clearFilter = (filterName: keyof LocalFilters) => {
+  if (filterName === 'sortBy' || filterName === 'order') {
+    // Don't clear sortBy and order, reset to defaults instead
+    if (filterName === 'sortBy') {
+      localFilters.sortBy = 'createdAt'
+    } else {
+      localFilters.order = 'desc'
+    }
+  } else {
+    // Type-safe assignment for optional properties
+    switch (filterName) {
+      case 'type':
+        localFilters.type = undefined
+        break
+      case 'priority':
+        localFilters.priority = undefined
+        break
+      case 'completed':
+        localFilters.completed = undefined
+        break
+    }
+  }
   emitFilterChange()
 }
 
 // Watch for external filter changes
-watch(() => props.filters, (newFilters) => {
-  localFilters.type = newFilters.type
-  localFilters.priority = newFilters.priority
-  localFilters.completed = newFilters.completed === true ? 'true' : 
-                          newFilters.completed === false ? 'false' : 
-                          undefined
-  localFilters.sortBy = newFilters.sortBy || 'createdAt'
-  localFilters.order = newFilters.order || 'desc'
-}, { deep: true })
+watch(
+  () => props.filters,
+  (newFilters) => {
+    localFilters.type = newFilters.type
+    localFilters.priority = newFilters.priority
+    localFilters.completed =
+      newFilters.completed === true ? 'true' : newFilters.completed === false ? 'false' : undefined
+    localFilters.sortBy = newFilters.sortBy || 'createdAt'
+    localFilters.order = newFilters.order || 'desc'
+  },
+  { deep: true },
+)
 </script>
 
 <style scoped>
@@ -335,16 +371,16 @@ watch(() => props.filters, (newFilters) => {
   .form-label {
     font-size: 0.8rem;
   }
-  
+
   .form-select-sm {
     font-size: 0.75rem;
   }
-  
+
   .btn-sm {
     font-size: 0.75rem;
     padding: 0.2rem 0.4rem;
   }
-  
+
   .badge {
     font-size: 0.7rem;
     padding: 0.25rem 0.4rem;
@@ -355,11 +391,11 @@ watch(() => props.filters, (newFilters) => {
   .card-body {
     padding: 1rem;
   }
-  
+
   .col-12:not(:last-child) {
     margin-bottom: 0.75rem;
   }
-  
+
   .d-flex.gap-2 {
     justify-content: center;
   }
